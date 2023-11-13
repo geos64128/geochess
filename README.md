@@ -28,4 +28,4 @@ It seems to run well, and at a reasonable speed for an 8-bit machine. I tried to
 from the user interface, only passing move information.  This would allow for other engines to be added.
 
 Please send screenshots of errant moves and I'll work on trying to correct any issues.
-scott <dot> hutter <atsign> gmail <dot> com
+scott _dot_ hutter _atsign_ gmail _dot_ com
