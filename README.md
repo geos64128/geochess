@@ -4,7 +4,7 @@ Chess game for GEOS 64 / 128
 
 ![Alt text](https://i.imgur.com/2dFdKmp.png "Screenshot")
 
-I started this game as I was rather surprised that I couldnt find any chess games for GEOS. If anyone
+I started this game as I was rather surprised that I couldn't find any chess games for GEOS. If anyone
 knows of any others, let me know.  This is a work in progress, so expect some bugs.  But as of this
 initial release it is playable. 
 
