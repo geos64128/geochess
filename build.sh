@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 rm target/geochess.d64
 mkdir target
 

@@ -385,7 +385,7 @@ unsigned char isKingInCheck(unsigned char kingRow, unsigned char kingCol)
         {2, -1}, {2, 1}
     };
 
-    // find the white king (if a position hasnt been supplied)
+    // find the white king (if a position hasn't been supplied)
     if(kingRow == 255 && kingCol == 255)
     {
         for(i=0;i<8;i++)
@@ -673,7 +673,7 @@ void MouseClickHandler()
                             // 1st (select) mouse click
                             if(gboard[r][c][0] >= WHT_KING && gboard[r][c][0] <= WHT_PAWN)
                             {
-                                // if player has selected a white peice
+                                // if player has selected a white piece
                                 // display the square selected sprite and await
                                 // the destination square selection
 
@@ -693,7 +693,7 @@ void MouseClickHandler()
                             else
                             {
                                 // player selected a square that does not have
-                                // a white peice.  hide select sprite and reset
+                                // a white piece.  hide select sprite and reset
                                 // click
                                 DisablSprite(2);
                                 sel_row1 = 255;
@@ -708,7 +708,7 @@ void MouseClickHandler()
                         else
                         {
                             // this click is for the selected destination square
-                            // first, check if the move is valid for the selected peice.
+                            // first, check if the move is valid for the selected piece.
                             invalidmove = CheckIfMoveIsValid(sel_row1, sel_col1, r,c);
 
                             if(invalidmove != 0)
@@ -736,7 +736,7 @@ void MouseClickHandler()
                             else 
                             {
                                 // move is valid, update the notation log,
-                                // move the peice, remove the selection sprite,
+                                // move the piece, remove the selection sprite,
                                 // execute the move with the engine, and await the AI's turn
 
                                 UpdateNotation(0, sel_row1, sel_col1, r, c);
@@ -760,7 +760,7 @@ void MouseClickHandler()
 
                                 if (gameState == STOPPED)
                                 {
-                                    // a checkmate has occured
+                                    // a checkmate has occurred
                                     UpdateStatus("Checkmate!");
 
                                     sel_row1 = 255;
