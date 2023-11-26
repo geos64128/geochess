@@ -613,6 +613,14 @@ void MovePiece(unsigned char from_row, unsigned char from_col, unsigned char to_
     unsigned char pattern;
     unsigned char piece;
 
+    // calls TempHideMouse for C128
+    if ((osType & GEOS128) == GEOS128)
+    {
+        if(C128_80_COL_MODE) {
+            TEMP_HIDE_MOUSE
+        }
+    }
+
     // clear source square
     pattern = gboard[from_row][from_col][1];
     DrawRect(pattern, &vboard[from_row][from_col]);
@@ -680,6 +688,14 @@ void MouseClickHandler()
                                 location.y = vboard[r][c].top;
                                 location.x = vboard[r][c].left;
                                 
+                                // calls TempHideMouse for C128
+                                if ((osType & GEOS128) == GEOS128)
+                                {
+                                    if(C128_80_COL_MODE) {
+                                        TEMP_HIDE_MOUSE
+                                    }
+                                }
+
                                 PosSprite(2, &location);
                                 EnablSprite(2);
 
