@@ -77,6 +77,11 @@ struct window vdc_BtmRow        = {179, SC_PIX_HEIGHT-1, 0, SCREENPIXELWIDTH-1};
 #define BLK_ROOK_BLK_SQR    'K'
 #define BLK_PAWN_BLK_SQR    'L'
 
+#define TEMP_HIDE_MOUSE     asm("jsr $c2d7");
+
+// last byte (64) tells soft-sprite on VDC
+// if the sprite is wider than 9 pixel (bit 7 off)
+// and the height of the sprite (other 7 bits)
 const char square_cursor[] = { 
  0b11111111,0b11111111,0b11100000,
  0b11111111,0b11111111,0b11100000,
@@ -98,7 +103,8 @@ const char square_cursor[] = {
  0b00000000,0b00000000,0b00000000,
  0b00000000,0b00000000,0b00000000,
  0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000 };
+ 0b00000000,0b00000000,0b00000000,
+ 0b00010000 };
 
  const char badmove_cursor[] = { 
  0b11111111,0b11111111,0b11100000,
@@ -121,7 +127,8 @@ const char square_cursor[] = {
  0b00000000,0b00000000,0b00000000,
  0b00000000,0b00000000,0b00000000,
  0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000};
+ 0b00000000,0b00000000,0b00000000,
+ 0b00010000};
 
 // the actual game board (3rd dimension is square color, piece)
 unsigned char gboard[8][8][2];
