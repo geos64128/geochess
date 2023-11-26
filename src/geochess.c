@@ -513,12 +513,79 @@ unsigned char isKingInCheck(unsigned char kingRow, unsigned char kingCol)
     return 0; // King is not in check
 }
 
+unsigned char isPieceBetweenUD(unsigned char src_row, unsigned char dest_row, unsigned char col)
+{
+    unsigned char r;
+
+    if(src_row < dest_row)
+    {
+        // scan squares below piece
+        for(r=src_row+1;r<dest_row;r++)
+            if(gboard[r][col][0] != EMPTY)
+                return 1;
+    }
+    else
+    {
+        // scan squares above piece
+        for(r=src_row-1;r>dest_row;r--)
+            if(gboard[r][col][0] != EMPTY)
+                return 1;
+    }
+
+    return 0;
+}
+
+unsigned char isPieceBetweenLR(unsigned char src_col, unsigned char dest_col, unsigned char row)
+{
+    unsigned char c;
+
+    if(src_col < dest_col)
+    {
+        // scan squares to the right of piece
+        for(c=src_col+1;c<dest_col;c++)
+            if(gboard[row][c][0] != EMPTY)
+                return 1;
+    }
+    else
+    {
+        // scan squares to the left of piece
+        for(c=src_col-1;c>dest_col;c--)
+            if(gboard[row][c][0] != EMPTY)
+                return 1;
+    }
+
+    return 0;
+}
+
+unsigned char isDiagonalMovementBlocked(int srcX, int srcY, int destX, int destY) {
+
+    int x, y, dx, dy;
+
+    // Determine the direction of movement
+    dx = (srcX < destX) ? 1 : -1;
+    dy = (srcY < destY) ? 1 : -1;
+
+    // Check for blocking pieces in the path
+    x = srcX + dx;
+    y = srcY + dy;
+    while (x != destX && y != destY) {
+        if (gboard[x][y][0] != EMPTY) {
+            return 1; // There is a blocking piece
+        }
+        x += dx;
+        y += dy;
+    }
+
+    return 0; // No blocking piece found
+}
+
 unsigned char CheckIfMoveIsValid(char src_row, char src_col, char dest_row, char dest_col)
 {
     unsigned char invalidmove = 0;
     unsigned char moving_piece = gboard[src_row][src_col][0];
     unsigned char dest_square = gboard[dest_row][dest_col][0];
     unsigned char temp_val;
+    unsigned char r,c;
 
     // does dest square have a piece of same color?
     if(dest_square >= WHT_KING && dest_square <= WHT_PAWN)
@@ -538,10 +605,17 @@ unsigned char CheckIfMoveIsValid(char src_row, char src_col, char dest_row, char
             case WHT_QUEEN:
                 if (( (src_row == dest_row || src_col == dest_col || abs(src_row - dest_row) == abs(src_col - dest_col))? 1 : 0 ) == 0)
                     invalidmove++;
+                if (src_col == dest_col)
+                        invalidmove += isPieceBetweenUD(src_row, dest_row, src_col);
+                if (src_row == dest_row)
+                        invalidmove += isPieceBetweenLR(src_col, dest_col, src_row);
+                if (src_col != dest_col && src_row != dest_row)
+                        invalidmove += isDiagonalMovementBlocked(src_row, src_col, dest_row, dest_col);
                 break;
             case WHT_BISHOP:
                 if (( (abs(src_row - dest_row) == abs(src_col - dest_col)) ? 1 : 0 ) == 0)
                     invalidmove++;
+                invalidmove += isDiagonalMovementBlocked(src_row, src_col, dest_row, dest_col);
                 break;
             case WHT_KNIGHT:
                 if (( ((abs(src_row-dest_row) == 2 && abs(src_col-dest_col) == 1) || (abs(src_row-dest_row) == 1 && abs(src_col-dest_col) == 2)) ? 1 : 0) == 0)
@@ -550,6 +624,11 @@ unsigned char CheckIfMoveIsValid(char src_row, char src_col, char dest_row, char
             case WHT_ROOK:
                 if (( (src_row == dest_row || src_col == dest_col) ? 1 : 0 ) == 0)
                     invalidmove++;
+                else
+                    if(src_col == dest_col)
+                        invalidmove += isPieceBetweenUD(src_row, dest_row, src_col);
+                    else
+                        invalidmove += isPieceBetweenLR(src_col, dest_col, src_row);
                 break;
             case WHT_PAWN:
                 if (src_row == 6 && src_row-dest_row == 2) 
@@ -910,7 +989,7 @@ int main()
 	{	
 		if((graphMode & 0x80) == 0x00)
 		{
-			DlgBoxOk ("GeoChess v1.0", "Commodore 128 40 column mode");
+			DlgBoxOk ("GeoChess v1.2", "Commodore 128 40 column mode");
 			set40col();
             Initialize();
             newgame();
@@ -918,7 +997,7 @@ int main()
 		}
 		else
 		{
-			DlgBoxOk ("GeoChess v1.0", "Commodore 128 80 column mode");
+			DlgBoxOk ("GeoChess v1.2", "Commodore 128 80 column mode");
 			set80col();
             Initialize();
             newgame();
@@ -927,7 +1006,7 @@ int main()
 	}
 	else
 	{
-		DlgBoxOk ("GeoChess v1.0", "For the Commodore 64");
+		DlgBoxOk ("GeoChess v1.2", "For the Commodore 64");
 		set40col();
         Initialize();
         newgame();
