@@ -8,10 +8,7 @@ I started this game as I was rather surprised that I couldn't find any chess gam
 knows of any others, let me know.  This is a work in progress, so expect some bugs.  But as of this
 initial release it is playable. 
 
-11/12/2023 - Initial beta release.  
-
 Known issues:
-* 128 80-col mode not yet added.
 * Pawn promotion needs to be finalized.
 * En passant rule is not implemented
 * Castling is not yet implemented
