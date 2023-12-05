@@ -8,20 +8,12 @@ MENU subMenu1 0,12 VERTICAL
 ; There are three items, all of them will call functions.
 ; The first and third ones are normal functions, see GEOSLib documentation for
 ; information about what the second function should return (it's a dynamic one).
-    "new game" MENU_ACTION newgame
+    "new game" MENU_ACTION NewGame
 	"switch 40/80" MENU_ACTION switch4080
     "quit" MENU_ACTION EnterDeskTop
 }
 
-MENU subMenu2 25,16 VERTICAL
-; This is a vertical menu, placed at (15,0).
-{
-; There are three items, all of them will call functions.
-; The first and third ones are normal functions, see GEOSLib documentation for
-; information about what the second function should return (it's a dynamic one).
-    "40 col" MENU_ACTION set40col
-    "80 col" MENU_ACTION set80col
-}
+
 
 ;; Format:  MENU "name" left,top ALIGN { "itemname" TYPE pointer ... }
 
@@ -35,7 +27,6 @@ MENU mainMenu 0,0 HORIZONTAL
 ;    "first sub-menu" SUB_MENU subMenu1
 ; This will work the same as an EnterDeskTop() call in C source code.
     "geos" SUB_MENU subMenu1
-	"width" SUB_MENU subMenu2
 }
 
 

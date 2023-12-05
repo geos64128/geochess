@@ -1,147 +1,200 @@
-/*********************************************************************************\
-;                                    BMCP v1.0                                    ;
-;---------------------------------------------------------------------------------;
-;                    A tribute to chess programming community                     ;
-;              based on the ideas taken from micro-Max by H.G.Muller              ;
-;---------------------------------------------------------------------------------;
-;                                by Maksim Korzh                                  ;
-;---------------------------------------------------------------------------------;
-\*********************************************************************************/
+//===================================================================================
+//
+//                                  GEOCHESS
+//
+// geoChess is a chess game for GEOS under the Commodore 64 and 128 computers
+//
+// Written by Scott Hutter
+// Nov 2023
+// 
+// You are free to modify this code as desired, as long as original author credit
+// is mentioned for both the geos code and the included AI engines
+//===================================================================================
 
-/*********************************************************************************\
-;---------------------------------------------------------------------------------;
-;           THIS WORK IS DEDICATED TO HOBBY PROGRAMMERS WHO AIMS TO GET           ;
-;                        THE VERY GIST OF CHESS PROGRAMMING                       ;
-;---------------------------------------------------------------------------------;
-;       "A vague understanding of your goals leads to unpredictable results       ;
-;             and abandoning the project halfway..." - my experience              ;
-;---------------------------------------------------------------------------------;
-\*********************************************************************************/
-
-/*********************************************************************************\
-;---------------------------------------------------------------------------------;
-;        Copyright © 2018 Maksim Korzh <freesoft.for.people@gmail.com>            ;
-;---------------------------------------------------------------------------------;
-;     This work is free. You can redistribute it and/or modify it under the       ;
-;      terms of the Do What The Fuck You Want To Public License, Version 2,       ;
-;       as published by Sam Hocevar. See the COPYING file for more details.       ;
-;---------------------------------------------------------------------------------;
-'       THIS PROGRAM IS FREE SOFTWARE. IT COMES WITHOUT ANY WARRANTY, TO          ;
-;        THE EXTENT PERMITTED BY APPLICABLE LAW. YOU CAN REDISTRIBUTE IT          ;
-;       AND/OR MODIFY IT UNDER THE TERMS OF THE DO WHAT THE FUCK YOU WANT         ;
-;          TO PUBLIC LICENCE, VERSION 2, AS PUBLISHED BY SAM HOCEVAR.             ;
-;                SEE http://www.wtfpl.net/ FOR MORE DETAILS.                      ;
-;---------------------------------------------------------------------------------;
-\*********************************************************************************/
-
-/*********************************************************************************\
-;---------------------------------------------------------------------------------;
-;                   DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE                   ;
-;                           Version 2, December 2004                              ;
-;                                                                                 ;
-;        Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>                         ;
-;                                                                                 ;
-;        Everyone is permitted to copy and distribute verbatim or modified        ;
-;        copies of this license document, and changing it is allowed as long      ;
-;        as the name is changed.                                                  ;
-;                                                                                 ;
-;                   DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE                   ;
-;          TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION        ;
-;                                                                                 ;
-;         0. You just DO WHAT THE FUCK YOU WANT TO.                               ;
-;---------------------------------------------------------------------------------;
-\*********************************************************************************/
 #include <geos.h>
-#include "geochess-res.h"
+//#include "geochess-res.h"
 #include "geochess.h"
+#include "geochess-ai.h"
 #include <string.h>
 
-
-void set40col(void)
+void main(void)
 {
-	GotoFirstMenu();
-}
+    char msg[16];
+    const char* versionString = TOSTRING(VERSION);
 
-void set80col(void)
-{
-	GotoFirstMenu();
-}
+	osType = get_ostype();
+    
+    strcpy(msg, "GeoChess v");
+    strcat(msg, versionString);
 
-void switch4080(void)
-{
-	SetNewMode();
-	
-	set40col();
-	DoMenu(&mainMenu);
-}
-
-void loadFonts()
-{
-	if(OpenRecordFile("geochessfont") != 0)
-	{
-		 DlgBoxOk ("Error accessing font.", "'geochessfont' not found.");
-		 EnterDeskTop();
+    hook_into_system();
+    atexit(&remove_hook); 
+    
+    if(ISGEOS128)
+	{	
+		if(C128_40_COL_MODE)
+        {
+			DlgBoxOk (msg, "Commodore 128 40 column mode");
+            sc_width = 1;
+            ((struct menu *)&mainMenu)->size.right = 27;
+            ((struct menu *)&mainMenu)->items[0].rest = (void *)&subMenu128_40;
+        }
+		else {
+			DlgBoxOk (msg, "Commodore 128 80 column mode");
+            sc_width = 2;
+            ((struct menu *)&mainMenu)->size.right = 35;
+            ((struct menu *)&mainMenu)->items[0].rest = (void *)&subMenu128_80;
+        }
 	}
+	else
+    {
+		DlgBoxOk (msg, "For the Commodore 64");
+        sc_width = 1;
+        ((struct menu *)&mainMenu)->size.right = 27;
+        ((struct menu *)&mainMenu)->items[0].rest = (void *)&subMenu64;
+    }
+
+    memset(gboard, 0, sizeof(gboard));
+
+    LoadFont();
+    InitScreen();
+    NewGame();
+    MainLoop();
+}
+
+void LoadFont(void)
+{
+    char fname[15] = "geochessfont40";
+
+    if (ISGEOS128)
+    {
+        if(C128_80_COL_MODE) {
+            fname[12] = '8';
+        }
+    }
+
+    if(OpenRecordFile(fname) != 0)
+    {
+        DlgBoxOk ("Error accessing fonts.", "'geochessfont40/80' not found.");
+        EnterDeskTop();
+    }
+	
 	PointRecord(16);
-	ReadRecord(fontbuff40, FONTBUFFERSIZE);
+	ReadRecord(fontbuffer, FONTBUFFERSIZE);
 	CloseRecordFile();
 }
 
 void DrawRect(unsigned char pattern, struct window *square) 
 {
     SetPattern(pattern);
+ 
+    square->left = square->left  * sc_width;
+    square->right = square->right * sc_width;
+ 
     InitDrawWindow(square);
     Rectangle();
 }
 
-unsigned char GetPieceChar(unsigned char i, unsigned char j) 
+void DrawStdRect(unsigned char pattern, struct window *square) 
+{
+    SetPattern(pattern);
+    InitDrawWindow(square);
+    Rectangle();
+}
+
+unsigned char GetPieceChar(unsigned char row, unsigned char col) 
 {
     unsigned char piece;
 
-    switch(gboard[i][j][0])
+    switch(gboard[row][col][0])
     {
         case WHT_KING:
-            piece = (gboard[i][j][1] == WHT ? WHT_KING_WHT_SQR : WHT_KING_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? WHT_KING_WHT_SQR : WHT_KING_BLK_SQR);
             break;
         case WHT_QUEEN:
-            piece = (gboard[i][j][1] == WHT ? WHT_QUEEN_WHT_SQR: WHT_QUEEN_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? WHT_QUEEN_WHT_SQR: WHT_QUEEN_BLK_SQR);
             break;
         case WHT_BISHOP:
-            piece = (gboard[i][j][1] == WHT ? WHT_BISHOP_WHT_SQR: WHT_BISHOP_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? WHT_BISHOP_WHT_SQR: WHT_BISHOP_BLK_SQR);
             break;
         case WHT_KNIGHT:
-            piece = (gboard[i][j][1] == WHT ? WHT_KNIGHT_WHT_SQR: WHT_KNIGHT_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? WHT_KNIGHT_WHT_SQR: WHT_KNIGHT_BLK_SQR);
             break;
         case WHT_ROOK:
-            piece = (gboard[i][j][1] == WHT ? WHT_ROOK_WHT_SQR: WHT_ROOK_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? WHT_ROOK_WHT_SQR: WHT_ROOK_BLK_SQR);
             break;
         case WHT_PAWN:
-            piece = (gboard[i][j][1] == WHT ? WHT_PAWN_WHT_SQR: WHT_PAWN_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? WHT_PAWN_WHT_SQR: WHT_PAWN_BLK_SQR);
             break;
         case BLK_KING:
-            piece = (gboard[i][j][1] == WHT ? BLK_KING_WHT_SQR : BLK_KING_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? BLK_KING_WHT_SQR : BLK_KING_BLK_SQR);
             break;
         case BLK_QUEEN:
-            piece = (gboard[i][j][1] == WHT ? BLK_QUEEN_WHT_SQR: BLK_QUEEN_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? BLK_QUEEN_WHT_SQR: BLK_QUEEN_BLK_SQR);
             break;
         case BLK_BISHOP:
-            piece = (gboard[i][j][1] == WHT ? BLK_BISHOP_WHT_SQR: BLK_BISHOP_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? BLK_BISHOP_WHT_SQR: BLK_BISHOP_BLK_SQR);
             break;
         case BLK_KNIGHT:
-            piece = (gboard[i][j][1] == WHT ? BLK_KNIGHT_WHT_SQR: BLK_KNIGHT_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? BLK_KNIGHT_WHT_SQR: BLK_KNIGHT_BLK_SQR);
             break;
         case BLK_ROOK:
-            piece = (gboard[i][j][1] == WHT ? BLK_ROOK_WHT_SQR: BLK_ROOK_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? BLK_ROOK_WHT_SQR: BLK_ROOK_BLK_SQR);
             break;
         case BLK_PAWN:
-            piece = (gboard[i][j][1] == WHT ? BLK_PAWN_WHT_SQR: BLK_PAWN_BLK_SQR);
+            piece = (gboard[row][col][1] == WHT ? BLK_PAWN_WHT_SQR: BLK_PAWN_BLK_SQR);
             break;
     }
 
     return piece;
 }
 
-void InitBoard(void) 
+void InitScreen(void) {
+
+    char *s = "  GeoChess  ";
+	unsigned short title_left = 0;
+    unsigned short screen_width = 0;
+    struct window rect;   
+
+    screen_width = (sc_width == 1 ? 319 : 639);
+    title_left = (sc_width == 1 ? 200 : 400);
+
+    // clear the background area at top
+    rect.top = 0;
+    rect.bot = 20;
+    rect.left = 0;
+    rect.right = screen_width;
+    DrawStdRect(2,&rect);
+
+    HorizontalLine(255, 20, 0, screen_width);
+    
+    // clear game area
+    rect.top = 21;
+    rect.bot = 199;
+    rect.left = 0;
+    rect.right = screen_width;
+    DrawStdRect(0,&rect);
+
+    // clear area under title
+    rect.top = 0;
+    rect.bot = 15;
+    rect.left = title_left;
+    rect.right = screen_width;
+    DrawStdRect(0,&rect);
+
+    HorizontalLine(255, 1, title_left, screen_width);
+	HorizontalLine(255, 4, title_left, screen_width);
+	HorizontalLine(255, 6, title_left, screen_width);
+	HorizontalLine(255, 8, title_left, screen_width);
+	HorizontalLine(255, 10, title_left, screen_width);
+	HorizontalLine(255, 13, title_left, screen_width);
+	
+	UseSystemFont();
+	PutString (s, 9, title_left+20);
+
+}
+
+void InitBoard(unsigned char initalPosition) 
 {
     unsigned int i, j;
     unsigned int start_top_offset = BOARD_TOP+1;
@@ -150,29 +203,40 @@ void InitBoard(void)
     unsigned int left_offset = start_left_offset;
     unsigned char toggle;
     unsigned char piece;          
+    struct window rect;
+
+    // clear the area
+    rect.top = BOARD_TOP;
+    rect.left = BOARD_LEFT;
+    rect.bot = BOARD_TOP+144;
+    rect.right = BOARD_LEFT+160;
+    DrawRect(0,&rect);
 
     // Draw chess board
+
+    // Horizonal lines
     j=BOARD_TOP;
     for(i=0;i<9;i++)
     {
-       HorizontalLine (255, j, BOARD_LEFT, BOARD_LEFT+160); 
+        HorizontalLine (255, j, BOARD_LEFT * sc_width, (BOARD_LEFT*sc_width)+(160*sc_width)); 
        j+=SQUARE_HEIGHT+2;
     }
 
-    j=BOARD_LEFT;
+    // Veritcal Lines
+    j=BOARD_LEFT * sc_width;
     for(i=0;i<9;i++)
     {
         VerticalLine(255, BOARD_TOP, BOARD_TOP+144, j);
-        j+=SQUARE_WIDTH+2;
+        j+=(SQUARE_WIDTH*sc_width)+(2*sc_width);
     }
 
-
+    // set up the click regions (squares)
     for (i = 0; i < 8; i++) {
         for (j = 0; j < 8; j++) {
-            vboard[i][j].top = top_offset + 0;
-            vboard[i][j].bot = top_offset + 0 + SQUARE_HEIGHT;
-            vboard[i][j].left = left_offset + 0;
-            vboard[i][j].right = left_offset + 0 + SQUARE_WIDTH;
+            vboard[i][j].top = top_offset;
+            vboard[i][j].bot = top_offset + SQUARE_HEIGHT;
+            vboard[i][j].left = left_offset;
+            vboard[i][j].right = left_offset + SQUARE_WIDTH;
 
             left_offset += SQUARE_WIDTH + 2;
         }
@@ -182,12 +246,12 @@ void InitBoard(void)
     }
 
     // color the squares
+    toggle = 0;
     for(i=0;i<8;i++)
     {
         for(j=0;j<8;j++)
         {   
             DrawRect(toggle, &vboard[i][j]);
-            gboard[i][j][0] = EMPTY;
             gboard[i][j][1] = (toggle == 0 ? WHT : BLK);
             toggle = (toggle == 1 ? 0 : 1);
         }
@@ -195,75 +259,77 @@ void InitBoard(void)
 
     }
 
-    // initial piece positions
-    gboard[0][0][0] = BLK_ROOK;
-    gboard[0][1][0] = BLK_KNIGHT;
-    gboard[0][2][0] = BLK_BISHOP;
-    gboard[0][3][0] = BLK_QUEEN;
-    gboard[0][4][0] = BLK_KING;
-    gboard[0][5][0] = BLK_BISHOP;
-    gboard[0][6][0] = BLK_KNIGHT;
-    gboard[0][7][0] = BLK_ROOK;
-    gboard[1][0][0] = BLK_PAWN;
-    gboard[1][1][0] = BLK_PAWN;
-    gboard[1][2][0] = BLK_PAWN;
-    gboard[1][3][0] = BLK_PAWN;
-    gboard[1][4][0] = BLK_PAWN;
-    gboard[1][5][0] = BLK_PAWN;
-    gboard[1][6][0] = BLK_PAWN;
-    gboard[1][7][0] = BLK_PAWN;
+    // grid notations
+    UseSystemFont();
+    PutChar('a', 184, 31 * sc_width);
+    PutChar('b', 184, 51 * sc_width);
+    PutChar('c', 184, 71 * sc_width);
+    PutChar('d', 184, 91 * sc_width);
+    PutChar('e', 184, 111 * sc_width);
+    PutChar('f', 184, 131 * sc_width);
+    PutChar('g', 184, 151 * sc_width);
+    PutChar('h', 184, 171 * sc_width);
 
-    gboard[6][0][0] = WHT_PAWN;
-    gboard[6][1][0] = WHT_PAWN;
-    gboard[6][2][0] = WHT_PAWN;
-    gboard[6][3][0] = WHT_PAWN;
-    gboard[6][4][0] = WHT_PAWN;
-    gboard[6][5][0] = WHT_PAWN;
-    gboard[6][6][0] = WHT_PAWN;
-    gboard[6][7][0] = WHT_PAWN;
-    gboard[7][0][0] = WHT_ROOK;
-    gboard[7][1][0] = WHT_KNIGHT;
-    gboard[7][2][0] = WHT_BISHOP;
-    gboard[7][3][0] = WHT_QUEEN;
-    gboard[7][4][0] = WHT_KING;
-    gboard[7][5][0] = WHT_BISHOP;
-    gboard[7][6][0] = WHT_KNIGHT;
-    gboard[7][7][0] = WHT_ROOK;
+    PutChar('8', 44, 10 * sc_width);
+    PutChar('7', 62, 10 * sc_width);
+    PutChar('6', 80, 10 * sc_width);
+    PutChar('5', 98, 10 * sc_width);
+    PutChar('4', 118, 10 * sc_width);
+    PutChar('3', 136, 10 * sc_width);
+    PutChar('2', 154, 10 * sc_width);
+    PutChar('1', 172, 10 * sc_width);
+
+    if (initalPosition == 0)
+    {
+        // initial piece positions
+        gboard[0][0][0] = BLK_ROOK;
+        gboard[0][1][0] = BLK_KNIGHT;
+        gboard[0][2][0] = BLK_BISHOP;
+        gboard[0][3][0] = BLK_QUEEN;
+        gboard[0][4][0] = BLK_KING;
+        gboard[0][5][0] = BLK_BISHOP;
+        gboard[0][6][0] = BLK_KNIGHT;
+        gboard[0][7][0] = BLK_ROOK;
+        gboard[1][0][0] = BLK_PAWN;
+        gboard[1][1][0] = BLK_PAWN;
+        gboard[1][2][0] = BLK_PAWN;
+        gboard[1][3][0] = BLK_PAWN;
+        gboard[1][4][0] = BLK_PAWN;
+        gboard[1][5][0] = BLK_PAWN;
+        gboard[1][6][0] = BLK_PAWN;
+        gboard[1][7][0] = BLK_PAWN;
+
+        gboard[6][0][0] = WHT_PAWN;
+        gboard[6][1][0] = WHT_PAWN;
+        gboard[6][2][0] = WHT_PAWN;
+        gboard[6][3][0] = WHT_PAWN;
+        gboard[6][4][0] = WHT_PAWN;
+        gboard[6][5][0] = WHT_PAWN;
+        gboard[6][6][0] = WHT_PAWN;
+        gboard[6][7][0] = WHT_PAWN;
+        gboard[7][0][0] = WHT_ROOK;
+        gboard[7][1][0] = WHT_KNIGHT;
+        gboard[7][2][0] = WHT_BISHOP;
+        gboard[7][3][0] = WHT_QUEEN;
+        gboard[7][4][0] = WHT_KING;
+        gboard[7][5][0] = WHT_BISHOP;
+        gboard[7][6][0] = WHT_KNIGHT;
+        gboard[7][7][0] = WHT_ROOK;
+    }
 
     // switch character sets
-    LoadCharSet ((struct fontdesc *)(fontbuff40));
+    LoadCharSet ((struct fontdesc *)(fontbuffer));
 
     // now place pieces according the gboard matrix
-    toggle = WHT;
     for(i=0;i<8;i++)
     {
         for(j=0;j<8;j++)
         {   
             piece = GetPieceChar(i,j);
             if(piece != EMPTY)
-                PutChar(piece, 50+(18*i), 27+(20*j));
+                PutChar(piece, 50+(18*i), (27 * sc_width) + ((20*j) * sc_width) ) ;
         }
     }
-
-    // grid notations
-    UseSystemFont();
-    PutChar('a', 184, 31);
-    PutChar('b', 184, 51);
-    PutChar('c', 184, 71);
-    PutChar('d', 184, 91);
-    PutChar('e', 184, 111);
-    PutChar('f', 184, 131);
-    PutChar('g', 184, 151);
-    PutChar('h', 184, 171);
-
-    PutChar('8', 44, 10);
-    PutChar('7', 62, 10);
-    PutChar('6', 80, 10);
-    PutChar('5', 98, 10);
-    PutChar('4', 118, 10);
-    PutChar('3', 136, 10);
-    PutChar('2', 154, 10);
-    PutChar('1', 172, 10);
 
 }
 
@@ -279,20 +345,20 @@ void InitMovePanel(void)
     DrawRect(0,&rect);
 
     // Draw panel borders and lines
-    HorizontalLine (255, 33, 207, 312);
-    HorizontalLine (255, 35, 207, 312);
-    HorizontalLine (255, 37, 207, 312);
-    HorizontalLine (255, 39, 207, 312);
-    HorizontalLine (255, 41, 207, 312);
-    HorizontalLine (255, 43, 207, 312);
-    HorizontalLine (255, 45, 207, 312);
-    HorizontalLine (255, 177, 207, 312);
-    HorizontalLine (255, 178, 209, 313);
+    HorizontalLine (255, 33, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 35, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 37, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 39, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 41, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 43, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 45, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 177, 207 * sc_width, 312 * sc_width);
+    HorizontalLine (255, 178, 209 * sc_width, 313 * sc_width);
     
-    VerticalLine(255, 33, 177, 207);
-    VerticalLine(255, 33, 177, 312);
-    VerticalLine(255, 40, 178, 313);
-    VerticalLine(255, 45, 174, 257);
+    VerticalLine(255, 33, 177, 207 * sc_width);
+    VerticalLine(255, 33, 177, 312 * sc_width);
+    VerticalLine(255, 40, 178, 313 * sc_width);
+    VerticalLine(255, 45, 174, 257 * sc_width);
 
     //rect.top = 34;
     //rect.left = 212;
@@ -301,13 +367,26 @@ void InitMovePanel(void)
     //DrawRect(0,&rect);
 
     UseSystemFont();
-    PutString("move log", 40, 215);
+    PutString("  move log  ", 40, 215 * sc_width);
 
+}
+
+void NewGame(void)
+{
+    notation_row_count = 0;
+    notation_text_position = 55;
+
+    InitBoard(0);
+    InitMovePanel();
+    engine_init();
+    UpdateStatus("Your move.");
+    gameState = INPROGRESS;
+    DoMenu((struct menu *)&mainMenu);
 }
 
 void UpdateNotation(unsigned char player, unsigned char src_row, unsigned char src_col, unsigned char dest_row, unsigned char dest_col) 
 {
-    unsigned char *current_move;
+    char *current_move;
     struct window rect;
 
     current_move = user_move;
@@ -339,28 +418,28 @@ void UpdateNotation(unsigned char player, unsigned char src_row, unsigned char s
         DrawRect(0,&rect);
         notation_row_count = 0;
         notation_text_position = 55;
-        VerticalLine(255, 45, 174, 257);
+        VerticalLine(255, 45, 174, 257 * sc_width);
     }
 
     UseSystemFont();
     
     if(player == 0)
-        PutString("White", notation_text_position, 215);
+        PutString("White", notation_text_position, 215 * sc_width);
     else
-        PutString("Black", notation_text_position, 215);
+        PutString("Black", notation_text_position, 215 * sc_width);
         
-    PutString(current_move, notation_text_position, 275);
+    PutString(current_move, notation_text_position, 275 * sc_width);
     notation_text_position += 11;
     notation_row_count++;
 
     
 }
 
-void UpdateStatus(const char *message)
+void UpdateStatus(char *message)
 {
     UseSystemFont();
-    PutString("                    ", 188, 215);
-    PutString(message, 188, 215);
+    PutString("                    ", 188, 215 * sc_width);
+    PutString(message, 188, 215 * sc_width);
 }
 
 unsigned char isKingInCheck(unsigned char kingRow, unsigned char kingCol)
@@ -373,8 +452,6 @@ unsigned char isKingInCheck(unsigned char kingRow, unsigned char kingCol)
     int dc;
     int newRow;
     int newCol;
-    int newColLeft;
-    int newColRight;
     int piece;
     int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     int diagonalDirections[4][2] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
@@ -452,23 +529,6 @@ unsigned char isKingInCheck(unsigned char kingRow, unsigned char kingCol)
             }
         }
     }
-
-    // Check for enemy pawns attacking diagonally
-    //for (dir = 0; dir < 2; dir++) {
-    //    dr = pawnDirections[dir][0];
-    //    dc = pawnDirections[dir][1];
-    //    newRow = kingRow + dr;
-    //    newColLeft = kingCol + dc;
-    //    newColRight = kingCol - dc;
-    //    if (newRow >= 0 && newRow < 8) {
-    //        if (newColLeft >= 0 && newColLeft < 8 && gboard[newRow][newColLeft][0] == BLK_PAWN) {
-    //            return 1; // King is under threat from a pawn
-    //        }
-    //        if (newColRight >= 0 && newColRight < 8 && gboard[newRow][newColRight][0] == BLK_PAWN) {
-    //            return 1; // King is under threat from a pawn
-    //        }
-    //    }
-    //}
 
     // check if pawn or king are above, diagonal left to this spot
     if (kingRow > 0 && kingCol > 0)
@@ -579,13 +639,12 @@ unsigned char isDiagonalMovementBlocked(int srcX, int srcY, int destX, int destY
     return 0; // No blocking piece found
 }
 
-unsigned char CheckIfMoveIsValid(char src_row, char src_col, char dest_row, char dest_col)
+unsigned char isMoveIsValid(char src_row, char src_col, char dest_row, char dest_col)
 {
     unsigned char invalidmove = 0;
     unsigned char moving_piece = gboard[src_row][src_col][0];
     unsigned char dest_square = gboard[dest_row][dest_col][0];
     unsigned char temp_val;
-    unsigned char r,c;
 
     // does dest square have a piece of same color?
     if(dest_square >= WHT_KING && dest_square <= WHT_PAWN)
@@ -693,7 +752,7 @@ void MovePiece(unsigned char from_row, unsigned char from_col, unsigned char to_
     unsigned char piece;
 
     // calls TempHideMouse for C128
-    if ((osType & GEOS128) == GEOS128)
+    if (ISGEOS128)
     {
         if(C128_80_COL_MODE) {
             TEMP_HIDE_MOUSE
@@ -702,22 +761,23 @@ void MovePiece(unsigned char from_row, unsigned char from_col, unsigned char to_
 
     // clear source square
     pattern = gboard[from_row][from_col][1];
-    DrawRect(pattern, &vboard[from_row][from_col]);
+    DrawStdRect(pattern, &vboard[from_row][from_col]);
 
     // clear dest square
     pattern = gboard[to_row][to_col][1];
-    DrawRect(pattern, &vboard[to_row][to_col]);
+    DrawStdRect(pattern, &vboard[to_row][to_col]);
 
     // move the piece to destination
     gboard[to_row][to_col][0] = gboard[from_row][from_col][0];
     gboard[from_row][from_col][0] = EMPTY;
 
     // switch character sets
-    LoadCharSet ((struct fontdesc *)(fontbuff40));
+    LoadCharSet ((struct fontdesc *)(fontbuffer));
 
     // draw proper piece at the new square
     piece = GetPieceChar(to_row, to_col);
-    PutChar(piece, 50+(18*to_row), 27+(20*to_col));
+    PutChar(piece, 50+(18*to_row), (27 * sc_width) + ((20*to_col) * sc_width) ) ;
+
 }
 
 void MouseClickHandler() 
@@ -768,7 +828,7 @@ void MouseClickHandler()
                                 location.x = vboard[r][c].left;
                                 
                                 // calls TempHideMouse for C128
-                                if ((osType & GEOS128) == GEOS128)
+                                if (ISGEOS128)
                                 {
                                     if(C128_80_COL_MODE) {
                                         TEMP_HIDE_MOUSE
@@ -804,7 +864,7 @@ void MouseClickHandler()
                         {
                             // this click is for the selected destination square
                             // first, check if the move is valid for the selected piece.
-                            invalidmove = CheckIfMoveIsValid(sel_row1, sel_col1, r,c);
+                            invalidmove = isMoveIsValid(sel_row1, sel_col1, r,c);
 
                             if(invalidmove != 0)
                             {
@@ -898,6 +958,44 @@ void MouseClickHandler()
     old_otherPressVec();
 }
 
+void NewGameMenuHandler(void) {
+
+    RecoverAllMenus();
+    NewGame();
+}
+
+void Switch4080MenuHandler(void)
+{
+    if (ISGEOS128)
+	{
+		if(C128_40_COL_MODE)
+        {
+            sc_width = 2;
+            ((struct menu *)&mainMenu)->size.right = 35;
+            ((struct menu *)&mainMenu)->items[0].rest = (void *)&subMenu128_80;
+        }
+            
+        else
+        {
+            sc_width = 1;
+            ((struct menu *)&mainMenu)->size.right = 27;
+            ((struct menu *)&mainMenu)->items[0].rest = (void *)&subMenu128_40;
+        }
+            
+            
+        SetNewMode();
+        LoadFont();
+        InitScreen();
+        InitBoard(1);
+        InitMovePanel();
+    }
+    else
+        RecoverAllMenus();
+
+	UpdateStatus("Your move.");
+    DoMenu((struct menu *)&mainMenu);
+}
+
 void hook_into_system(void) {
         old_otherPressVec = otherPressVec;
         otherPressVec = MouseClickHandler;
@@ -905,117 +1003,9 @@ void hook_into_system(void) {
 
 void remove_hook(void) {
         otherPressVec = old_otherPressVec;
+
+        free((struct menu *)&mainMenu);
 }
 
-void Initialize(void) {
 
-    unsigned char *s = "  GeoChess  ";
-	unsigned short hdrY = 0;
-    
 
-	if ((osType & GEOS64) == GEOS64) // c64
-	{
-		screen_pixel_width = SC_PIX_WIDTH;
-		winHeader = &vic_winHdr;
-		winChessBoard = &vic_winChessBoard;
-		winBottomRow = &vic_BtmRow;
-		hdrY = 200;
-		vdc = 0;
-	}
-	
-	if ((osType & GEOS128) == GEOS128) // c128
-	{
-		if(C128_40_COL_MODE)
-		{
-			// 40 col mode
-			screen_pixel_width = SC_PIX_WIDTH;
-			winHeader = &vic_winHdr;
-			winChessBoard = &vic_winChessBoard;
-			winBottomRow = &vic_BtmRow;
-			hdrY = 200;
-			vdc = 0;
-		}
-		else if(C128_80_COL_MODE)
-		{
-			// == 0x80 - 80 col mode
-			screen_pixel_width = SCREENPIXELWIDTH-1;
-			winHeader = &vdc_winHdr;
-			winChessBoard = &vdc_winChessBoard;
-			winBottomRow = &vdc_BtmRow;
-			hdrY = 400;
-			vdc = 1;
-		}
-	}
-
-    SetPattern(0);
-		
-	InitDrawWindow (winChessBoard);
-	Rectangle();
-	HorizontalLine(255, 20, 0, screen_pixel_width-1);
-
-	InitDrawWindow (winHeader);
-	Rectangle();
-	HorizontalLine(255, 1, hdrY, screen_pixel_width-1);
-	HorizontalLine(255, 4, hdrY, screen_pixel_width-1);
-	HorizontalLine(255, 6, hdrY, screen_pixel_width-1);
-	HorizontalLine(255, 8, hdrY, screen_pixel_width-1);
-	HorizontalLine(255, 10, hdrY, screen_pixel_width-1);
-	HorizontalLine(255, 13, hdrY, screen_pixel_width-1);
-	
-	UseSystemFont();
-	PutString (s, 9, hdrY+20);
-}
-
-void newgame(void)
-{
-    notation_row_count = 0;
-    notation_text_position = 55;
-
-    RecoverAllMenus();
-    InitBoard();
-    InitMovePanel();
-    engine_init();
-    UpdateStatus("Your move.");
-    gameState = INPROGRESS;
-    DoMenu(&mainMenu);
-}
-
-int main()
-{
-	osType = get_ostype();
-    loadFonts();
-
-    if((osType & GEOS128) == GEOS128)
-	{	
-		if((graphMode & 0x80) == 0x00)
-		{
-			DlgBoxOk ("GeoChess v1.2", "Commodore 128 40 column mode");
-			set40col();
-            Initialize();
-            newgame();
-			DoMenu(&mainMenu);
-		}
-		else
-		{
-			DlgBoxOk ("GeoChess v1.2", "Commodore 128 80 column mode");
-			set80col();
-            Initialize();
-            newgame();
-			DoMenu(&mainMenu);
-		}	
-	}
-	else
-	{
-		DlgBoxOk ("GeoChess v1.2", "For the Commodore 64");
-		set40col();
-        Initialize();
-        newgame();
-		DoMenu(&mainMenu);
-	}
-
-    hook_into_system();
-    atexit(&remove_hook); 
-
-    MainLoop();
-
-}

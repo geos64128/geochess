@@ -14,7 +14,8 @@ DISK_IMAGE=geochess.d64
 
 c1541 -format "geochess,sh" d64 $DISK_IMAGE \
 -write geochess.cvt geochess.cvt \
--write ../src/geochessfont.cvt geochessfont.cvt \
+-write ../src/geochessfont40.cvt geochessf40.cvt \
+-write ../src/geochessfont80.cvt geochessf80.cvt \
 
 rm -f geochess.cvt
 
