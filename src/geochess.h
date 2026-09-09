@@ -1,51 +1,67 @@
-//===================================================================================
-//
-//                                  GEOCHESS
-//
-// geoChess is a chess game for GEOS under the Commodore 64 and 128 computers
-//
-// Written by Scott Hutter
-// Nov 2023
-// 
-// You are free to modify this code as desired, as long as original author credit
-// is mentioned for both the geos code and the included AI engines
-//===================================================================================
+/*
+ * GEOCHESS
+ *
+ * Chess for GEOS on the Commodore 64 and 128.
+ *
+ * Original application:
+ *   Scott Hutter, November 2023.
+ *
+ * Original permission:
+ *   You are free to modify this code as desired, as long as original
+ *   author credit is mentioned for both the GEOS code and the
+ *   included AI engines.
+ *
+ * Corrected source revision: GEOCHESS_FIXSET_1.
+ *
+ * This header contains application storage and cc65 GEOS menu
+ * resources. Include it in geochess.c only.
+ */
 
 #ifndef GEOCHESS_H
 #define GEOCHESS_H
+
+#include <geos.h>
 
 #define VERSION 1.3
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-#define ISGEOS64           (osType & GEOS64) == GEOS64
-#define ISGEOS128          (osType & GEOS128) == GEOS128
-#define C128_40_COL_MODE   (graphMode & 0x80) == 0x00
-#define C128_80_COL_MODE   (graphMode & 0x80) == 0x80
-#define TEMP_HIDE_MOUSE    asm("jsr $c2d7");
+#define ISGEOS64           (((osType) & GEOS64) == GEOS64)
+#define ISGEOS128          (((osType) & GEOS128) == GEOS128)
 
-#define FONTBUFFERSIZE  5048 //4104
-#define BOARD_TOP       33
-#define BOARD_LEFT      26
-#define SQUARE_WIDTH    18
-#define SQUARE_HEIGHT   16
+#define C128_40_COL_MODE    (((graphMode) & 0x80) == 0x00)
+#define C128_80_COL_MODE    (((graphMode) & 0x80) == 0x80)
 
-#define EMPTY       0
-#define WHT_KING    1
-#define WHT_QUEEN   2
-#define WHT_BISHOP  3
-#define WHT_KNIGHT  4
-#define WHT_ROOK    5
-#define WHT_PAWN    6
-#define BLK_KING    7
-#define BLK_QUEEN   8
-#define BLK_BISHOP  9
-#define BLK_KNIGHT  10
-#define BLK_ROOK    11
-#define BLK_PAWN    12
+/* Retained from the original C128 drawing path. */
+#define TEMP_HIDE_MOUSE    asm("jsr $c2d7")
 
-#define WHT   0
-#define BLK   1
+#define FONTBUFFERSIZE     4928
+
+#define BOARD_TOP          33
+#define BOARD_LEFT         26
+#define SQUARE_WIDTH       18
+#define SQUARE_HEIGHT      16
+
+#define NOTATION_ROWS      11
+
+#define EMPTY              0
+
+#define WHT_KING           1
+#define WHT_QUEEN          2
+#define WHT_BISHOP         3
+#define WHT_KNIGHT         4
+#define WHT_ROOK           5
+#define WHT_PAWN           6
+
+#define BLK_KING           7
+#define BLK_QUEEN          8
+#define BLK_BISHOP         9
+#define BLK_KNIGHT         10
+#define BLK_ROOK           11
+#define BLK_PAWN           12
+
+#define WHT                0
+#define BLK                1
 
 #define WHT_KING_WHT_SQR    'A'
 #define WHT_QUEEN_WHT_SQR   'B'
@@ -75,156 +91,222 @@
 #define BLK_ROOK_BLK_SQR    'K'
 #define BLK_PAWN_BLK_SQR    'L'
 
-char osType = 0;
-unsigned char sc_width = 1;
-unsigned short screen_pixel_width;
-
-struct window *winChessBoard;
-struct window *winHeader;
-struct window *winBottomRow;
-
-struct window vic_winHdr        = {0, 15, 200, SC_PIX_WIDTH-1 };
-struct window vic_winChessBoard = {20, SC_PIX_HEIGHT-1, 0, SC_PIX_WIDTH-1};
-struct window vic_BtmRow        = {184, SC_PIX_HEIGHT-1, 0, SC_PIX_WIDTH-1};
-
-struct window vdc_winHdr        = {0, 15, 400, SCREENPIXELWIDTH-1 };
-struct window vdc_winChessBoard = {20, SC_PIX_HEIGHT-1, 0, SCREENPIXELWIDTH-1};
-struct window vdc_BtmRow        = {179, SC_PIX_HEIGHT-1, 0, SCREENPIXELWIDTH-1};
-
-// last byte (64) tells soft-sprite on VDC
-// if the sprite is wider than 9 pixel (bit 7 off)
-// and the height of the sprite (other 7 bits)
-const char square_cursor[] = { 
- 0b11111111,0b11111111,0b11100000,
- 0b11111111,0b11111111,0b11100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11000000,0b00000000,0b01100000,
- 0b11111111,0b11111111,0b11100000,
- 0b11111111,0b11111111,0b11100000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00010000 };
-
- const char badmove_cursor[] = { 
- 0b11111111,0b11111111,0b11100000,
- 0b11111111,0b11111111,0b11100000,
- 0b11100000,0b00000000,0b11100000,
- 0b11010000,0b00000001,0b01100000,
- 0b11001000,0b00000010,0b01100000,
- 0b11000100,0b00000100,0b01100000,
- 0b11000010,0b00001000,0b01100000,
- 0b11000001,0b11110000,0b01100000,
- 0b11000001,0b11110000,0b01100000,
- 0b11000010,0b00001000,0b01100000,
- 0b11000100,0b00000100,0b01100000,
- 0b11001000,0b00000010,0b01100000,
- 0b11010000,0b00000001,0b01100000,
- 0b11100000,0b00000000,0b11100000,
- 0b11111111,0b11111111,0b11100000,
- 0b11111111,0b11111111,0b11100000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00000000,0b00000000,0b00000000,
- 0b00010000};
-
-
-// game board notation
-char *gbnotation[8][8] = {
-    {"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"},
-    {"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7"},
-    {"a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6"},
-    {"a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5"},
-    {"a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4"},
-    {"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3"},
-    {"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2"},
-    {"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"}
-};
-
 enum GameStates {
     INPROGRESS,
     STOPPED
 };
 
+/*
+ * Saved game record.
+ *
+ * Written to disk verbatim, so the layout is the file format. The
+ * board is packed to one byte per playable square: the engine keeps
+ * an int per 0x88 entry, but no piece code exceeds 23 and the
+ * off-board columns hold no game state.
+ *
+ * A magic and a version go first so a file from another program, or
+ * from a later revision, is rejected before anything is disturbed.
+ */
+#define SAVE_MAGIC0        'G'
+#define SAVE_MAGIC1        'C'
+#define SAVE_VERSION       1
 
-struct window vboard[8][8];         // the visual board rectangles
-unsigned char gboard[8][8][2];      // the actual game board (3rd dimension is square color, piece)
-char user_move[5];   
-char fontbuffer[FONTBUFFERSIZE];
-unsigned char sel_row1 = 255;
-unsigned char sel_col1 = 255;
-unsigned char tctr = 0;
-unsigned char notation_row_count = 0;
-unsigned char notation_text_position = 55;
-enum GameStates gameState = INPROGRESS;
+#define SAVE_NO_EP         255
 
-void_func old_otherPressVec;
+#define SAVE_CLASS         "GeoChess Game"
+#define SAVE_CLASS_PREFIX  "GeoChess"
 
+#define SAVE_NAME_MAX      16
 
-// Function prototypes
-void Switch4080MenuHandler(void);
+typedef struct {
+    unsigned char magic0;
+    unsigned char magic1;
+    unsigned char version;
+    unsigned char squares[64];
+    unsigned char mover;             /* WHT or BLK */
+    unsigned char rights;            /* castling rights bits */
+    unsigned char ep;                /* packed square, or SAVE_NO_EP */
+    unsigned char state;             /* engine_state */
+    unsigned char log_count;
+    unsigned char log_players[NOTATION_ROWS];
+    char log_moves[NOTATION_ROWS][5];
+    unsigned char reserved[2];
+} SaveGame;
+
+static unsigned char osType = 0;
+static unsigned char sc_width = 1;
+
+/*
+ * Square geometry, already scaled for the current mode.
+ *
+ * Top and bottom depend only on the rank and left and right only on
+ * the file, so two small tables and one scratch rectangle replace the
+ * sixty-four windows this used to keep.
+ */
+static unsigned char sq_top[8];
+static unsigned int sq_left[8];
+static struct window sq_rect;
+
+/*
+ * Rendering cache: the display piece code per square.
+ *
+ * Square colour is not stored. It is (row + column) & 1 and never
+ * changes, so computing it costs less than keeping a second plane.
+ *
+ * The engine's board[] is the authoritative chess position.
+ */
+static unsigned char gboard[8][8];
+
+#define SQUARE_COLOR(row, col)   (((row) + (col)) & 1)
+
+/*
+ * What is currently on screen. Comparing it against gboard finds the
+ * squares a move actually changed, which is two for an ordinary move,
+ * three for en passant and four for castling.
+ */
+static unsigned char gdrawn[8][8];
+
+static char fontbuffer[FONTBUFFERSIZE];
+
+/*
+ * save_buf holds the record being written or the one just read. It is
+ * fully validated before any of it reaches the engine, so a bad file
+ * never disturbs the game in progress and nothing has to be rolled
+ * back. The 256 byte file header is a local in the save handler
+ * rather than another static.
+ */
+static SaveGame save_buf;
+static char save_name[SAVE_NAME_MAX + 1];
+
+static unsigned char sel_row1 = 255;
+static unsigned char sel_col1 = 255;
+static unsigned char tctr = 0;
+
+static unsigned char notation_row_count = 0;
+static char notation_moves[NOTATION_ROWS][5];
+static unsigned char notation_players[NOTATION_ROWS];
+
+static enum GameStates gameState = STOPPED;
+static void_func old_otherPressVec = 0;
+
+/* Application entry points and menu callbacks. */
 void NewGameMenuHandler(void);
+void LoadGameMenuHandler(void);
+void SaveGameMenuHandler(void);
+void Switch4080MenuHandler(void);
+void QuitGame(void);
+void MouseClickHandler(void);
 
 void InitScreen(void);
 void InitBoard(unsigned char initialPosition);
+void InitMovePanel(void);
 void NewGame(void);
 
-void LoadFont(void);
-void hook_into_system(void);
-void remove_hook(void);
-void InitMovePanel(void);
+unsigned char LoadFont(void);
 
-void UpdateStatus(char *message);
+void DrawRect(unsigned char pattern, struct window *square);
+void DrawStdRect(unsigned char pattern, struct window *square);
+
 unsigned char GetPieceChar(unsigned char row, unsigned char col);
 
-// main menu definition
+void RefreshBoardDisplay(void);
+
+void UpdateNotation(
+    unsigned char player,
+    unsigned char src_row,
+    unsigned char src_col,
+    unsigned char dest_row,
+    unsigned char dest_col
+);
+
+void UpdateStatus(const char *message);
+
+void hook_into_system(void);
+void remove_hook(void);
+
+/*
+ * cc65 GEOS resource declarations.
+ *
+ * Separate main-menu resources avoid modifying const menu storage
+ * through a cast when switching display modes.
+ *
+ * These are the active menus. Do not also include geochess-res.h.
+ */
 
 const void subMenu64 = {
-	(char)12, (char)40,
-	(int)0, (int)66,
-	(char)(2 | VERTICAL),
-	"new game", (char)MENU_ACTION, (int)NewGameMenuHandler,
-	"quit", (char)MENU_ACTION, (int)EnterDeskTop,
+    (char)12, (char)40,
+    (int)0, (int)66,
+    (char)(2 | VERTICAL),
+    "new game", (char)MENU_ACTION, (int)NewGameMenuHandler,
+    "quit", (char)MENU_ACTION, (int)QuitGame,
 };
 
 const void subMenu128_40 = {
-	(char)12, (char)54,
-	(int)0, (int)66,
-	(char)(3 | VERTICAL),
-	"new game", (char)MENU_ACTION, (int)NewGameMenuHandler,
-	"switch 40/80", (char)MENU_ACTION, (int)Switch4080MenuHandler,
-	"quit", (char)MENU_ACTION, (int)EnterDeskTop,
+    (char)12, (char)54,
+    (int)0, (int)66,
+    (char)(3 | VERTICAL),
+    "new game", (char)MENU_ACTION, (int)NewGameMenuHandler,
+    "switch 40/80", (char)MENU_ACTION, (int)Switch4080MenuHandler,
+    "quit", (char)MENU_ACTION, (int)QuitGame,
 };
 
 const void subMenu128_80 = {
-	(char)12, (char)54,
-	(int)0, (int)90,
-	(char)(3 | VERTICAL),
-	"new game", (char)MENU_ACTION, (int)NewGameMenuHandler,
-	"switch 40/80", (char)MENU_ACTION, (int)Switch4080MenuHandler,
-	"quit", (char)MENU_ACTION, (int)EnterDeskTop,
+    (char)12, (char)54,
+    (int)0, (int)90,
+    (char)(3 | VERTICAL),
+    "new game", (char)MENU_ACTION, (int)NewGameMenuHandler,
+    "switch 40/80", (char)MENU_ACTION, (int)Switch4080MenuHandler,
+    "quit", (char)MENU_ACTION, (int)QuitGame,
 };
 
+/*
+ * The file sub-menus drop from under the second title, so their left
+ * edge starts where the "geos" title ends.
+ */
+/* Both 40 column modes share one file menu. */
+const void fileMenu40 = {
+    (char)12, (char)40,
+    (int)27, (int)107,
+    (char)(2 | VERTICAL),
+    "load game", (char)MENU_ACTION, (int)LoadGameMenuHandler,
+    "save game", (char)MENU_ACTION, (int)SaveGameMenuHandler,
+};
 
-const void mainMenu = {
-	(char)0, (char)15,
-	(int)0, (int)27,
-	(char)(1 | HORIZONTAL),
-	"geos", (char)SUB_MENU, (int)&subMenu64,
+const void fileMenu128_80 = {
+    (char)12, (char)40,
+    (int)35, (int)145,
+    (char)(2 | VERTICAL),
+    "load game", (char)MENU_ACTION, (int)LoadGameMenuHandler,
+    "save game", (char)MENU_ACTION, (int)SaveGameMenuHandler,
+};
+
+/*
+ * Two titles now, so the bar is widened to cover both. A horizontal
+ * menu lays its titles out from the left edge using the system font,
+ * and over-reserving only widens the strip that responds to a click.
+ */
+const void mainMenu64 = {
+    (char)0, (char)15,
+    (int)0, (int)58,
+    (char)(2 | HORIZONTAL),
+    "geos", (char)SUB_MENU, (int)&subMenu64,
+    "file", (char)SUB_MENU, (int)&fileMenu40,
+};
+
+const void mainMenu128_40 = {
+    (char)0, (char)15,
+    (int)0, (int)58,
+    (char)(2 | HORIZONTAL),
+    "geos", (char)SUB_MENU, (int)&subMenu128_40,
+    "file", (char)SUB_MENU, (int)&fileMenu40,
+};
+
+const void mainMenu128_80 = {
+    (char)0, (char)15,
+    (int)0, (int)74,
+    (char)(2 | HORIZONTAL),
+    "geos", (char)SUB_MENU, (int)&subMenu128_80,
+    "file", (char)SUB_MENU, (int)&fileMenu128_80,
 };
 
 #endif
